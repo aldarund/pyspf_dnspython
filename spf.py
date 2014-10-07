@@ -1,5 +1,5 @@
 __author__ = 'ShapeR'
-#!/usr/bin/python
+# !/usr/bin/python
 """SPF (Sender Policy Framework) implementation.
 
 Copyright (c) 2003 Terence Way <terry@wayforward.net>
@@ -80,13 +80,15 @@ import re
 import sys
 import socket  # for inet_ntoa() and inet_aton()
 import struct  # for pack() and unpack()
-import time    # for time()
+import time  # for time()
+
 try:
-    import urllib.parse as urllibparse # for quote()
+    import urllib.parse as urllibparse  # for quote()
 except:
     import urllib as urllibparse
-import sys     # for version_info()
+import sys  # for version_info()
 from functools import reduce
+
 try:
     from email.message import Message
 except ImportError:
@@ -104,7 +106,8 @@ import dns.resolver
 resolver = dns.resolver.Resolver()
 resolver.cache = dns.resolver.Cache()
 
-def DNSLookup(name, qtype,  timeout=20):
+
+def DNSLookup(name, qtype, timeout=20):
     try:
         answers = resolver.query(name, qtype)
         #resp.show()
@@ -114,14 +117,13 @@ def DNSLookup(name, qtype,  timeout=20):
         # return both as binary string.
         #
         res = []
-        if answers:
-            for a in answers :
-                if a.rdtype == 16:
-                    res.append(((name, qtype), a.strings))
-                if a.rdtype == 15:
-                    res.append(((name, qtype), [a.preference,str(a.exchange)]))
-                if a.rdtype == 1:
-                    res.append(((name, qtype), a.address))
+        for a in answers:
+            if a.rdtype == 16:
+                res.append(((name, qtype), a.strings))
+            if a.rdtype == 15:
+                res.append(((name, qtype), [a.preference, str(a.exchange)]))
+            if a.rdtype == 1:
+                res.append(((name, qtype), a.address))
         return res
     except AttributeError as x:
         raise TempError('DNS ' + str(x))
@@ -132,7 +134,8 @@ def DNSLookup(name, qtype,  timeout=20):
     except dns.exception.DNSException as x:
         raise TempError('DNS ' + str(x))
 
-RE_SPF = re.compile(br'^v=spf1$|^v=spf1 ',re.IGNORECASE)
+
+RE_SPF = re.compile(br'^v=spf1$|^v=spf1 ', re.IGNORECASE)
 
 # Regular expression to look for modifiers
 RE_MODIFIER = re.compile(r'^([a-z][a-z0-9_\-\.]*)=', re.IGNORECASE)
@@ -148,30 +151,30 @@ RE_ARGS = re.compile(r'([0-9]*)(r?)([^0-9a-zA-Z]*)')
 RE_DUAL_CIDR = re.compile(r'//(0|[1-9]\d*)$')
 RE_CIDR = re.compile(r'/(0|[1-9]\d*)$')
 
-PAT_IP4 = r'\.'.join([r'(?:\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])']*4)
-RE_IP4 = re.compile(PAT_IP4+'$')
+PAT_IP4 = r'\.'.join([r'(?:\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])'] * 4)
+RE_IP4 = re.compile(PAT_IP4 + '$')
 
 RE_TOPLAB = re.compile(
     r'\.(?:[0-9a-z]*[a-z][0-9a-z]*|[0-9a-z]+-[0-9a-z-]*[0-9a-z])\.?$|%s'
-        % PAT_CHAR, re.IGNORECASE)
+    % PAT_CHAR, re.IGNORECASE)
 
 RE_DOT_ATOM = re.compile(r'%(atext)s+([.]%(atext)s+)*$' % {
-    'atext': r"[0-9a-z!#$%&'*+/=?^_`{}|~-]" }, re.IGNORECASE)
+    'atext': r"[0-9a-z!#$%&'*+/=?^_`{}|~-]"}, re.IGNORECASE)
 
 # Derived from RFC 3986 appendix A
-RE_IP6 = re.compile(                 '(?:%(hex4)s:){6}%(ls32)s$'
-                   '|::(?:%(hex4)s:){5}%(ls32)s$'
-                  '|(?:%(hex4)s)?::(?:%(hex4)s:){4}%(ls32)s$'
-    '|(?:(?:%(hex4)s:){0,1}%(hex4)s)?::(?:%(hex4)s:){3}%(ls32)s$'
-    '|(?:(?:%(hex4)s:){0,2}%(hex4)s)?::(?:%(hex4)s:){2}%(ls32)s$'
-    '|(?:(?:%(hex4)s:){0,3}%(hex4)s)?::%(hex4)s:%(ls32)s$'
-    '|(?:(?:%(hex4)s:){0,4}%(hex4)s)?::%(ls32)s$'
-    '|(?:(?:%(hex4)s:){0,5}%(hex4)s)?::%(hex4)s$'
-    '|(?:(?:%(hex4)s:){0,6}%(hex4)s)?::$'
-  % {
-    'ls32': r'(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|%s)'%PAT_IP4,
+RE_IP6 = re.compile('(?:%(hex4)s:){6}%(ls32)s$'
+                    '|::(?:%(hex4)s:){5}%(ls32)s$'
+                    '|(?:%(hex4)s)?::(?:%(hex4)s:){4}%(ls32)s$'
+                    '|(?:(?:%(hex4)s:){0,1}%(hex4)s)?::(?:%(hex4)s:){3}%(ls32)s$'
+                    '|(?:(?:%(hex4)s:){0,2}%(hex4)s)?::(?:%(hex4)s:){2}%(ls32)s$'
+                    '|(?:(?:%(hex4)s:){0,3}%(hex4)s)?::%(hex4)s:%(ls32)s$'
+                    '|(?:(?:%(hex4)s:){0,4}%(hex4)s)?::%(ls32)s$'
+                    '|(?:(?:%(hex4)s:){0,5}%(hex4)s)?::%(hex4)s$'
+                    '|(?:(?:%(hex4)s:){0,6}%(hex4)s)?::$'
+                    % {
+    'ls32': r'(?:[0-9a-f]{1,4}:[0-9a-f]{1,4}|%s)' % PAT_IP4,
     'hex4': r'[0-9a-f]{1,4}'
-    }, re.IGNORECASE)
+}, re.IGNORECASE)
 
 # Local parts and senders have their delimiters replaced with '.' during
 # macro expansion
@@ -180,23 +183,23 @@ JOINERS = {'l': '.', 's': '.'}
 
 RESULTS = {'+': 'pass', '-': 'fail', '?': 'neutral', '~': 'softfail',
            'pass': 'pass', 'fail': 'fail', 'permerror': 'permerror',
-       'error': 'temperror', 'neutral': 'neutral', 'softfail': 'softfail',
-       'none': 'none', 'local': 'local', 'trusted': 'trusted',
-           'ambiguous': 'ambiguous', 'unknown': 'permerror' }
+           'error': 'temperror', 'neutral': 'neutral', 'softfail': 'softfail',
+           'none': 'none', 'local': 'local', 'trusted': 'trusted',
+           'ambiguous': 'ambiguous', 'unknown': 'permerror'}
 
 EXPLANATIONS = {'pass': 'sender SPF authorized',
                 'fail': 'SPF fail - not authorized',
                 'permerror': 'permanent error in processing',
                 'temperror': 'temporary DNS error in processing',
-        'softfail': 'domain owner discourages use of this host',
-        'neutral': 'access neither permitted nor denied',
-        'none': '',
+                'softfail': 'domain owner discourages use of this host',
+                'neutral': 'access neither permitted nor denied',
+                'none': '',
                 #Note: The following are not formally SPF results
                 'local': 'No SPF result due to local policy',
                 'trusted': 'No SPF check - trusted-forwarder.org',
                 #Ambiguous only used in harsh mode for SPF validation
                 'ambiguous': 'No error, but results may vary'
-        }
+}
 
 DELEGATE = None
 
@@ -208,56 +211,65 @@ DEFAULT_SPF = 'v=spf1 a/24 mx/24 ptr'
 TRUSTED_FORWARDERS = 'v=spf1 ?include:spf.trusted-forwarder.org -all'
 
 # maximum DNS lookups allowed
-MAX_LOOKUP = 10 #RFC 4408 Para 10.1/RFC 7208 4.6.4
-MAX_MX = 10 #RFC 4408 Para 10.1/RFC 7208 4.6.4
-MAX_PTR = 10 #RFC 4408 Para 10.1/RFC 7208 4.6.4
-MAX_CNAME = 10 # analogous interpretation to MAX_PTR
+MAX_LOOKUP = 10  #RFC 4408 Para 10.1/RFC 7208 4.6.4
+MAX_MX = 10  #RFC 4408 Para 10.1/RFC 7208 4.6.4
+MAX_PTR = 10  #RFC 4408 Para 10.1/RFC 7208 4.6.4
+MAX_CNAME = 10  # analogous interpretation to MAX_PTR
 MAX_RECURSION = 20
-MAX_PER_LOOKUP_TIME = 20 # Per RFC 7208 4.6.4
-MAX_VOID_LOOKUPS = 2 # RFC 7208 4.6.4
+MAX_PER_LOOKUP_TIME = 20  # Per RFC 7208 4.6.4
+MAX_VOID_LOOKUPS = 2  # RFC 7208 4.6.4
 
 ALL_MECHANISMS = ('a', 'mx', 'ptr', 'exists', 'include', 'ip4', 'ip6', 'all')
 COMMON_MISTAKES = {
-  'prt': 'ptr', 'ip': 'ip4', 'ipv4': 'ip4', 'ipv6': 'ip6', 'all.': 'all'
+    'prt': 'ptr', 'ip': 'ip4', 'ipv4': 'ip4', 'ipv6': 'ip6', 'all.': 'all'
 }
 
 #If harsh processing, for the validator, is invoked, warn if results
 #likely deviate from the publishers intention.
 class AmbiguityWarning(Exception):
     "SPF Warning - ambiguous results"
+
     def __init__(self, msg, mech=None, ext=None):
         Exception.__init__(self, msg, mech)
         self.msg = msg
         self.mech = mech
         self.ext = ext
+
     def __str__(self):
         if self.mech:
-            return '%s: %s' %(self.msg, self.mech)
+            return '%s: %s' % (self.msg, self.mech)
         return self.msg
+
 
 class TempError(Exception):
     "Temporary SPF error"
+
     def __init__(self, msg, mech=None, ext=None):
         Exception.__init__(self, msg, mech)
         self.msg = str(msg)
         self.mech = mech
         self.ext = ext
+
     def __str__(self):
         if self.mech:
-            return '%s: %s'%(self.msg, self.mech)
+            return '%s: %s' % (self.msg, self.mech)
         return self.msg
+
 
 class PermError(Exception):
     "Permanent SPF error"
+
     def __init__(self, msg, mech=None, ext=None):
         Exception.__init__(self, msg, mech)
         self.msg = msg
         self.mech = mech
         self.ext = ext
+
     def __str__(self):
         if self.mech:
-            return '%s: %s'%(self.msg, self.mech)
+            return '%s: %s' % (self.msg, self.mech)
         return self.msg
+
 
 def check2(i, s, h, local=None, receiver=None, timeout=MAX_PER_LOOKUP_TIME, verbose=False, querytime=20):
     """Test an incoming MAIL FROM:<s>, from a client with ip address i.
@@ -280,9 +292,10 @@ def check2(i, s, h, local=None, receiver=None, timeout=MAX_PER_LOOKUP_TIME, verb
     #>>> check2(i='61.51.192.42', s='liukebing@bcc.com', h='bmsi.com')
 
     """
-    res,_,exp = query(i=i, s=s, h=h, local=local,
-        receiver=receiver,timeout=timeout,verbose=verbose,querytime=querytime).check()
-    return res,exp
+    res, _, exp = query(i=i, s=s, h=h, local=local,
+                        receiver=receiver, timeout=timeout, verbose=verbose, querytime=querytime).check()
+    return res, exp
+
 
 def check(i, s, h, local=None, receiver=None, verbose=False):
     """Test an incoming MAIL FROM:<s>, from a client with ip address i.
@@ -298,13 +311,14 @@ def check(i, s, h, local=None, receiver=None, verbose=False):
     #>>> check(i='61.51.192.42', s='liukebing@bcc.com', h='bmsi.com')
 
     """
-    res,code,exp = query(i=i, s=s, h=h, local=local, receiver=receiver,
-        verbose=verbose).check()
+    res, code, exp = query(i=i, s=s, h=h, local=local, receiver=receiver,
+                           verbose=verbose).check()
     if res == 'permerror':
         res = 'unknown'
     elif res == 'tempfail':
-        res =='error'
+        res == 'error'
     return res, code, exp
+
 
 class query(object):
     """A query object keeps the relevant information about a single SPF
@@ -327,8 +341,9 @@ class query(object):
 
     Also keeps cache: DNS cache.
     """
+
     def __init__(self, i, s, h, local=None, receiver=None, strict=True,
-                timeout=MAX_PER_LOOKUP_TIME,verbose=False,querytime=0):
+                 timeout=MAX_PER_LOOKUP_TIME, verbose=False, querytime=0):
         self.s, self.h = s, h
         if not s and h:
             self.s = 'postmaster@' + h
@@ -338,7 +353,7 @@ class query(object):
         self.l, self.o = split_email(s, h)
         self.t = str(int(time.time()))
         self.d = self.o
-        self.p = None   # lazy evaluation
+        self.p = None  # lazy evaluation
         if receiver:
             self.r = receiver
         else:
@@ -349,15 +364,15 @@ class query(object):
         self.cache = {}
         self.defexps = dict(EXPLANATIONS)
         self.exps = dict(EXPLANATIONS)
-        self.libspf_local = local    # local policy
+        self.libspf_local = local  # local policy
         self.lookups = 0
         # New processing limit in RFC 7208, section 4.6.4
         self.void_lookups = 0
         # strict can be False, True, or 2 (numeric) for harsh
         self.strict = strict
         self.timeout = timeout
-        self.querytime = querytime # Default to not using a global check
-                                   # timelimit since this is an RFC 4408 MAY
+        self.querytime = querytime  # Default to not using a global check
+        # timelimit since this is an RFC 4408 MAY
         if querytime > 0:
             self.timeout = querytime
         self.timer = 0
@@ -373,10 +388,10 @@ class query(object):
         # self.addr = ipaddr/ipaddress object representing the connect IP
         self.default_modifier = True
         self.verbose = verbose
-        self.authserv = None # Only used in A-R header generation tests
+        self.authserv = None  # Only used in A-R header generation tests
 
-    def log(self,mech,d,spf):
-        print('%s: %s "%s"'%(mech,d,spf))
+    def log(self, mech, d, spf):
+        print('%s: %s "%s"' % (mech, d, spf))
 
     def set_ip(self, i):
         "Set connect ip, and ip6 or ip4 mode."
@@ -405,7 +420,7 @@ class query(object):
         if ip6:
             self.A = 'AAAA'
             self.v = 'ip6'
-            self.i = '.'.join(list(self.ipaddr.exploded.replace(':','').upper()))
+            self.i = '.'.join(list(self.ipaddr.exploded.replace(':', '').upper()))
             self.cidrmax = 128
         else:
             self.A = 'A'
@@ -514,7 +529,7 @@ class query(object):
     >>> q.check(spf='v=spf1 ip4:1.2.3.4 ?all exp=_exp.controlledmail.com')
     ('neutral', 250, 'access neither permitted nor denied')
         """
-        self.mech = []        # unknown mechanisms
+        self.mech = []  # unknown mechanisms
         # If not strict, certain PermErrors (mispelled
         # mechanisms, strict processing limits exceeded)
         # will continue processing.  However, the exception
@@ -527,7 +542,7 @@ class query(object):
             self.lookups = 0
             if not spf:
                 spf = self.dns_spf(self.d)
-                if self.verbose: self.log("top",self.d,spf)
+                if self.verbose: self.log("top", self.d, spf)
             if self.libspf_local and spf:
                 spf = insert_libspf_local_policy(
                     spf, self.libspf_local)
@@ -591,7 +606,7 @@ class query(object):
                 self.perm_error = x
         return self.perm_error
 
-    def expand_domain(self,arg):
+    def expand_domain(self, arg):
         "validate and expand domain-spec"
         # any trailing dot was removed by expand()
         if RE_TOPLAB.split(arg)[-1]:
@@ -668,7 +683,7 @@ class query(object):
     ('A/16//48', 'a', 'email.example.com', 48, 'pass')
 
     """
-        if mech.endswith( "," ):
+        if mech.endswith(","):
             self.note_error('Do not separate mechnisms with commas', mech)
             mech = mech[:-1]
         # a mechanism
@@ -688,7 +703,7 @@ class query(object):
 
         if m == 'a' and RE_IP4.match(arg):
             x = self.note_error(
-              'Use the ip4 mechanism for ip4 addresses', mech)
+                'Use the ip4 mechanism for ip4 addresses', mech)
             m = 'ip4'
 
 
@@ -706,8 +721,8 @@ class query(object):
                 cidrlength = cidr6length
         elif m == 'ip4' or RE_IP4.match(m):
             if m != 'ip4':
-              self.note_error( 'Missing IP4' , mech)
-              m,arg = 'ip4',m
+                self.note_error('Missing IP4', mech)
+                m, arg = 'ip4', m
             if cidr6length is not None:
                 raise PermError('Dual CIDR not allowed', mech)
             if cidrlength is None:
@@ -727,8 +742,8 @@ class query(object):
                 raise PermError('Invalid IP6 address', mech)
         else:
             if cidrlength is not None or cidr6length is not None:
-              if m in ALL_MECHANISMS:
-                raise PermError('CIDR not allowed', mech)
+                if m in ALL_MECHANISMS:
+                    raise PermError('CIDR not allowed', mech)
             cidrlength = self.cidrmax
 
         if m in ('a', 'mx', 'ptr', 'exists', 'include'):
@@ -736,7 +751,7 @@ class query(object):
                 raise PermError('implicit exists not allowed', mech)
             arg = self.expand_domain(arg)
             if not arg:
-                raise PermError('empty domain:',mech)
+                raise PermError('empty domain:', mech)
             if m == 'include':
                 if arg == self.d:
                     if mech != 'include':
@@ -748,8 +763,8 @@ class query(object):
         if m == 'all' and mech.count(':'):
             # print '|'+ arg + '|', mech, self.d,
             self.note_error(
-            'Invalid all mechanism format - only qualifier allowed with all'
-              , mech)
+                'Invalid all mechanism format - only qualifier allowed with all'
+                , mech)
         if m in ALL_MECHANISMS:
             return mech, m, arg, cidrlength, result
         if m[1:] in ALL_MECHANISMS:
@@ -803,17 +818,17 @@ class query(object):
                 mechs.append(self.validate_mechanism(mech))
                 continue
 
-            mod,arg = m
+            mod, arg = m
             if mod in modifiers:
                 if mod == 'redirect':
-                    raise PermError('redirect= MUST appear at most once',mech)
-                self.note_error('%s= MUST appear at most once'%mod,mech)
+                    raise PermError('redirect= MUST appear at most once', mech)
+                self.note_error('%s= MUST appear at most once' % mod, mech)
                 # just use last one in lax mode
             modifiers.append(mod)
             if mod == 'exp':
                 # always fetch explanation to check permerrors
                 if not arg:
-                    raise PermError('exp has empty domain-spec:',arg)
+                    raise PermError('exp has empty domain-spec:', arg)
                 arg = self.expand_domain(arg)
                 if arg:
                     try:
@@ -821,12 +836,13 @@ class query(object):
                         if exp and not recursion:
                             # only set explanation in base recursion level
                             self.set_explanation(exp)
-                    except: pass
+                    except:
+                        pass
             elif mod == 'redirect':
                 self.check_lookups()
                 redirect = self.expand_domain(arg)
                 if not redirect:
-                    raise PermError('redirect has empty domain:',arg)
+                    raise PermError('redirect has empty domain:', arg)
             elif mod == 'default':
                 # default modifier is obsolete
                 if self.strict > 1:
@@ -842,7 +858,7 @@ class query(object):
                         if v: self.options[v] = True
             else:
                 # spf rfc: 3.6 Unrecognized Mechanisms and Modifiers
-                self.expand(m[1])       # syntax error on invalid macro
+                self.expand(m[1])  # syntax error on invalid macro
 
         # Evaluate mechanisms
         #
@@ -851,14 +867,14 @@ class query(object):
             if m == 'include':
                 self.check_lookups()
                 d = self.dns_spf(arg)
-                if self.verbose: self.log("include",arg,d)
-                res, code, txt = self.check1(d,arg, recursion + 1)
+                if self.verbose: self.log("include", arg, d)
+                res, code, txt = self.check1(d, arg, recursion + 1)
                 if res == 'pass':
                     break
                 if res == 'none':
                     self.note_error(
-                        'No valid SPF record for included domain: %s' %arg,
-                      mech)
+                        'No valid SPF record for included domain: %s' % arg,
+                        mech)
                 res = 'neutral'
                 continue
             elif m == 'all':
@@ -867,7 +883,7 @@ class query(object):
             elif m == 'exists':
                 self.check_lookups()
                 try:
-                    if len(self.dns_a(arg,'A')) > 0:
+                    if len(self.dns_a(arg, 'A')) > 0:
                         break
                 except AmbiguityWarning:
                     # Exists wants no response sometimes so don't raise
@@ -876,7 +892,7 @@ class query(object):
 
             elif m == 'a':
                 self.check_lookups()
-                if self.cidrmatch(self.dns_a(arg,self.A), cidrlength):
+                if self.cidrmatch(self.dns_a(arg, self.A), cidrlength):
                     break
 
             elif m == 'mx':
@@ -885,14 +901,14 @@ class query(object):
                     break
 
             elif m == 'ip4':
-                if self.v == 'in-addr': # match own connection type only
+                if self.v == 'in-addr':  # match own connection type only
                     try:
                         if self.cidrmatch([arg], cidrlength): break
                     except socket.error:
                         raise PermError('syntax error', mech)
 
             elif m == 'ip6':
-                if self.v == 'ip6': # match own connection type only
+                if self.v == 'ip6':  # match own connection type only
                     try:
                         if self.cidrmatch([arg], cidrlength): break
                     except socket.error:
@@ -910,17 +926,17 @@ class query(object):
                 redirect_record = self.dns_spf(redirect)
                 if not redirect_record:
                     raise PermError('redirect domain has no SPF record',
-                        redirect)
-                if self.verbose: self.log("redirect",redirect,redirect_record)
+                                    redirect)
+                if self.verbose: self.log("redirect", redirect, redirect_record)
                 # forget modifiers on redirect
                 if not recursion:
-                  self.exps = dict(self.defexps)
-                  self.options = {}
+                    self.exps = dict(self.defexps)
+                    self.options = {}
                 return self.check1(redirect_record, redirect, recursion)
             result = default
             mech = None
 
-        if not recursion:       # record matching mechanism at base level
+        if not recursion:  # record matching mechanism at base level
             self.mechanism = mech
         if result == 'fail':
             return (result, 550, exps[result])
@@ -929,8 +945,8 @@ class query(object):
 
     def check_lookups(self):
         self.lookups = self.lookups + 1
-        if self.lookups > MAX_LOOKUP*4:
-            raise PermError('More than %d DNS lookups'%(MAX_LOOKUP*4))
+        if self.lookups > MAX_LOOKUP * 4:
+            raise PermError('More than %d DNS lookups' % (MAX_LOOKUP * 4))
         if self.lookups > MAX_LOOKUP:
             self.note_error('Too many DNS lookups')
 
@@ -938,13 +954,13 @@ class query(object):
         """Expand an explanation."""
         if spec:
             try:
-                a = self.dns_txt(spec,ignore_void=True)
+                a = self.dns_txt(spec, ignore_void=True)
                 if len(a) == 1:
                     return str(self.expand(to_ascii(a[0]), stripdot=False))
             except PermError:
                 # RFC4408 6.2/4 syntax errors cause exp= to be ignored
                 if self.strict > 1:
-                    raise	# but report in harsh mode for record checking tools
+                    raise  # but report in harsh mode for record checking tools
                 pass
         elif self.strict > 1:
             raise PermError('Empty domain-spec on exp=')
@@ -952,7 +968,7 @@ class query(object):
         # (unless you give precedence to the grammar).
         return None
 
-    def expand(self, s, stripdot=True): # macros='slodipvh'
+    def expand(self, s, stripdot=True):  # macros='slodipvh'
         """Do SPF RFC macro expansion.
 
         Examples:
@@ -1043,7 +1059,7 @@ class query(object):
             regex = RE_INVALID_MACRO
             for label in s.split('.'):
                 if regex.search(s):
-                    raise PermError ('invalid-macro-char ', label)
+                    raise PermError('invalid-macro-char ', label)
         # expand macros
         end = 0
         result = ''
@@ -1058,7 +1074,7 @@ class query(object):
                 result += '%20'
             else:
                 letter = macro[2].lower()
-#                print letter
+                #                print letter
                 if letter == 'p':
                     self.getp()
                 elif letter in 'crt' and stripdot:
@@ -1070,15 +1086,15 @@ class query(object):
                         raise PermError('Unknown Macro Encountered', macro)
                     e = expand_one(expansion, macro[3:-1], JOINERS.get(letter))
                     if letter != macro[2]:
-                        e = urllibparse.quote(e,'~')
+                        e = urllibparse.quote(e, '~')
                     result += e
             end = i.end()
         result += s[end:]
         if stripdot and result.endswith('.'):
-            result =  result[:-1]
+            result = result[:-1]
         if result.count('.') != 0:
             if len(result) > 253:
-                result = result[(result.index('.')+1):]
+                result = result[(result.index('.') + 1):]
         return result
 
     def dns_spf(self, domain):
@@ -1089,8 +1105,8 @@ class query(object):
         # Per RFC 4.3/1, check for malformed domain.  This produces
         # no results as a special case.
         for label in domain.split('.'):
-          if not label or len(label) > 63:
-            return None
+            if not label or len(label) > 63:
+                return None
         # for performance, check for most common case of TXT first
         a = [t for t in self.dns_txt(domain) if RE_SPF.match(t)]
         if len(a) > 1:
@@ -1101,8 +1117,8 @@ class query(object):
         if self.strict > 1:
             #Only check for Type SPF in harsh mode until it is more popular.
             try:
-                b = [t for t in self.dns_txt(domain,'SPF',ignore_void=True)
-			if RE_SPF.match(t)]
+                b = [t for t in self.dns_txt(domain, 'SPF', ignore_void=True)
+                     if RE_SPF.match(t)]
             except TempError as x:
                 # some braindead DNS servers hang on type 99 query
                 if self.strict > 1: raise TempError(x)
@@ -1111,16 +1127,16 @@ class query(object):
                 raise PermError('Two or more type SPF spf records found.')
             if len(b) == 1:
                 if self.strict > 1 and len(a) == 1 and a[0] != b[0]:
-                #Changed from permerror to warning based on RFC 4408 Auth 48 change
+                    #Changed from permerror to warning based on RFC 4408 Auth 48 change
                     raise AmbiguityWarning(
-'v=spf1 records of both type TXT and SPF (type 99) present, but not identical')
+                        'v=spf1 records of both type TXT and SPF (type 99) present, but not identical')
                 return to_ascii(b[0])
         if len(a) == 1:
-            return to_ascii(a[0])    # return TXT if SPF wasn't found
-        if DELEGATE:    # use local record if neither found
+            return to_ascii(a[0])  # return TXT if SPF wasn't found
+        if DELEGATE:  # use local record if neither found
             a = [t
-              for t in self.dns_txt(domain+'._spf.'+DELEGATE,ignore_void=True)
-            if RE_SPF.match(t)
+                 for t in self.dns_txt(domain + '._spf.' + DELEGATE, ignore_void=True)
+                 if RE_SPF.match(t)
             ]
             if len(a) == 1: return to_ascii(a[0])
         return None
@@ -1137,22 +1153,22 @@ class query(object):
     # records - even when they are non-ascii.  So we return bytes.
     # The caller does the ascii check for SPF records and explanations.
     #
-    def dns_txt(self, domainname, rr='TXT',ignore_void=False):
+    def dns_txt(self, domainname, rr='TXT', ignore_void=False):
         "Get a list of TXT records for a domain name."
         if domainname:
-          try:
-              dns_list = self.dns(domainname, rr,ignore_void=ignore_void)
-              if dns_list:
-                  # a[0][:0] is '' for py3dns-3.0.2, otherwise b''
-                  a = [a[0][:0].join(a) for a in dns_list]
-                  # FIXME: workaround for error in py3dns-3.0.2
-                  if isinstance(a[0],bytes):
-                      return a
-                  return [s.encode('utf-8') for s in a]
-          # FIXME: workaround for error in py3dns-3.0.2
-          except UnicodeError:
-              raise PermError('Non-ascii characters found in %s record for %s'
-                 %(rr,domainname))
+            try:
+                dns_list = self.dns(domainname, rr, ignore_void=ignore_void)
+                if dns_list:
+                    # a[0][:0] is '' for py3dns-3.0.2, otherwise b''
+                    a = [a[0][:0].join(a) for a in dns_list]
+                    # FIXME: workaround for error in py3dns-3.0.2
+                    if isinstance(a[0], bytes):
+                        return a
+                    return [s.encode('utf-8') for s in a]
+            # FIXME: workaround for error in py3dns-3.0.2
+            except UnicodeError:
+                raise PermError('Non-ascii characters found in %s record for %s'
+                                % (rr, domainname))
         return []
 
     def dns_mx(self, domainname):
@@ -1167,7 +1183,7 @@ class query(object):
             max = MAX_MX
             if len(mxnames) > MAX_MX:
                 raise PermError(
-                    'More than %d MX records returned'%MAX_MX)
+                    'More than %d MX records returned' % MAX_MX)
             if self.strict > 1:
                 if len(mxnames) == 0:
                     raise AmbiguityWarning(
@@ -1175,7 +1191,7 @@ class query(object):
         else:
             max = MAX_MX * 4
         mxnames.sort()
-        return [a for mx in mxnames[:max] for a in self.dns_a(mx[1],self.A)]
+        return [a for mx in mxnames[:max] for a in self.dns_a(mx[1], self.A)]
 
     def dns_a(self, domainname, A='A'):
         """Get a list of IP addresses for a domainname.
@@ -1184,15 +1200,15 @@ class query(object):
         r = self.dns(domainname, A)
         if self.strict > 1 and len(r) == 0:
             raise AmbiguityWarning(
-                    'No %s records found for'%A, domainname)
+                'No %s records found for' % A, domainname)
         if A == 'AAAA' and bytes is str:
-          # work around pydns inconsistency plus python2 bytes/str ambiguity
-          return [ipaddress.Bytes(ip) for ip in r]
+            # work around pydns inconsistency plus python2 bytes/str ambiguity
+            return [ipaddress.Bytes(ip) for ip in r]
         return r
 
     def validated_ptrs(self):
         """Figure out the validated PTR domain names for the connect IP."""
-# To prevent DoS attacks, more than 10 PTR names MUST NOT be looked up
+        # To prevent DoS attacks, more than 10 PTR names MUST NOT be looked up
         if self.strict:
             max = MAX_PTR
             if self.strict > 1:
@@ -1208,30 +1224,30 @@ class query(object):
                                 'No PTR records found for ptr mechanism', self.c)
                 except:
                     raise AmbiguityWarning(
-                      'No PTR records found for ptr mechanism', self.c)
+                        'No PTR records found for ptr mechanism', self.c)
         else:
             max = MAX_PTR * 4
         cidrlength = self.cidrmax
         return [p for p in self.dns_ptr(self.i)[:max]
-            if self.cidrmatch(self.dns_a(p,self.A),cidrlength)]
+                if self.cidrmatch(self.dns_a(p, self.A), cidrlength)]
 
     def dns_ptr(self, i):
         """Get a list of domain names for an IP address."""
-        return self.dns('%s.%s.arpa'%(reverse_dots(i),self.v), 'PTR')
+        return self.dns('%s.%s.arpa' % (reverse_dots(i), self.v), 'PTR')
 
     # We have to be careful which additional DNS RRs we cache.  For
     # instance, PTR records are controlled by the connecting IP, and they
     # could poison our local cache with bogus A and MX records.
 
     SAFE2CACHE = {
-      ('MX','A'): None,
-      ('MX','MX'): None,
-      ('CNAME','A'): None,
-      ('A','A'): None,
-      ('AAAA','AAAA'): None,
-      ('PTR','PTR'): None,
-      ('TXT','TXT'): None,
-      ('SPF','SPF'): None
+        ('MX', 'A'): None,
+        ('MX', 'MX'): None,
+        ('CNAME', 'A'): None,
+        ('A', 'A'): None,
+        ('AAAA', 'AAAA'): None,
+        ('PTR', 'PTR'): None,
+        ('TXT', 'TXT'): None,
+        ('SPF', 'SPF'): None
     }
 
     # FIXME: move to dnsplug
@@ -1250,12 +1266,12 @@ class query(object):
         post: isinstance(__return__, types.ListType)
         """
         if name.endswith('.'): name = name[:-1]
-        if not reduce(lambda x,y:x and 0 < len(y) < 64, name.split('.'),True):
-            return []   # invalid DNS name (too long or empty)
-        result = self.cache.get( (name, qtype), [])
+        if not reduce(lambda x, y: x and 0 < len(y) < 64, name.split('.'), True):
+            return []  # invalid DNS name (too long or empty)
+        result = self.cache.get((name, qtype), [])
         if result: return result
-        cnamek = (name,'CNAME')
-        cname = self.cache.get( cnamek )
+        cnamek = (name, 'CNAME')
+        cname = self.cache.get(cnamek)
 
         if cname:
             cname = cname[0]
@@ -1271,13 +1287,13 @@ class query(object):
             for k, v in DNSLookup(name, qtype, timeout):
                 if k == cnamek:
                     cname = v
-                if k[1] == 'CNAME' or (qtype,k[1]) in safe2cache:
+                if k[1] == 'CNAME' or (qtype, k[1]) in safe2cache:
                     self.cache.setdefault(k, []).append(v)
                     #if ans and qtype == k[1]:
                     #    self.cache.setdefault((name,qtype), []).append(v)
-            result = self.cache.get( (name, qtype), [])
+            result = self.cache.get((name, qtype), [])
             if self.querytime > 0:
-                self.querytime = self.querytime - (time.time()-timethen)
+                self.querytime = self.querytime - (time.time() - timethen)
         if not result and cname:
             if not cnames:
                 cnames = {}
@@ -1289,7 +1305,7 @@ class query(object):
                 raise PermError('CNAME loop')
             result = self.dns(cname, qtype, cnames=cnames)
             if result:
-                self.cache[(name,qtype)] = result
+                self.cache[(name, qtype)] = result
         if not result and not ignore_void:
             self.void_lookups += 1
             if self.void_lookups > MAX_VOID_LOOKUPS:
@@ -1336,7 +1352,7 @@ class query(object):
                     else:
                         self.iplist.append(network.ip)
         except AttributeError:
-            for netwrk in [ipaddress.IPNetwork(ip,strict=False) for ip in ipaddrs]:
+            for netwrk in [ipaddress.IPNetwork(ip, strict=False) for ip in ipaddrs]:
                 network = netwrk.supernet(new_prefix=n)
                 if isinstance(self.iplist, bool):
                     if network.__contains__(self.ipaddr):
@@ -1402,29 +1418,36 @@ class query(object):
         >>> o['bestguess']
         'pass'
         """
-        a = val.split(None,1)
+        a = val.split(None, 1)
         self.result = a[0].lower()
         self.mechanism = None
         if len(a) < 2: return 'none'
         val = a[1]
         if val.startswith('('):
-          pos = val.find(')')
-          if pos < 0: return self.result
-          self.comment = val[1:pos]
-          val = val[pos+1:]
+            pos = val.find(')')
+            if pos < 0: return self.result
+            self.comment = val[1:pos]
+            val = val[pos + 1:]
         msg = Message()
-        msg.add_header('Received-SPF','; '+val)
+        msg.add_header('Received-SPF', '; ' + val)
         p = {}
-        for k,v in msg.get_params(header='Received-SPF'):
-          if k == 'client-ip':
-            self.set_ip(v)
-          elif k == 'envelope-from': self.s = v
-          elif k == 'helo': self.h = v
-          elif k == 'receiver': self.r = v
-          elif k == 'problem': self.mech = v
-          elif k == 'mechanism': self.mechanism = v
-          elif k == 'identity': self.ident = v
-          elif k.startswith('x-'): p[k[2:]] = v
+        for k, v in msg.get_params(header='Received-SPF'):
+            if k == 'client-ip':
+                self.set_ip(v)
+            elif k == 'envelope-from':
+                self.s = v
+            elif k == 'helo':
+                self.h = v
+            elif k == 'receiver':
+                self.r = v
+            elif k == 'problem':
+                self.mech = v
+            elif k == 'mechanism':
+                self.mechanism = v
+            elif k == 'identity':
+                self.ident = v
+            elif k.startswith('x-'):
+                p[k[2:]] = v
         self.l, self.o = split_email(self.s, self.h)
         return p
 
@@ -1461,9 +1484,9 @@ class query(object):
         """
 
         if val.startswith('Authentication-Results:'):
-            return(self.parse_header_ar(val))
+            return (self.parse_header_ar(val))
         else:
-            return(self.parse_header_spf(val))
+            return (self.parse_header_spf(val))
 
     def get_header(self, res, receiver=None, header_type='spf', aid=None, **kv):
         """
@@ -1523,9 +1546,9 @@ class query(object):
             receiver = self.r
         client_ip = self.c
         helo = quote_value(self.h)
-        resmap = { 'pass': 'Pass', 'neutral': 'Neutral', 'fail': 'Fail',
-                'softfail': 'SoftFail', 'none': 'None',
-                'temperror': 'TempError', 'permerror': 'PermError' }
+        resmap = {'pass': 'Pass', 'neutral': 'Neutral', 'fail': 'Fail',
+                  'softfail': 'SoftFail', 'none': 'None',
+                  'temperror': 'TempError', 'permerror': 'PermError'}
         identity = self.ident
         if identity == 'helo':
             envelope_from = None
@@ -1537,36 +1560,45 @@ class query(object):
         else:
             problem = None
         mechanism = quote_value(self.mechanism)
-        if hasattr(self,'comment'):
-          comment = self.comment
+        if hasattr(self, 'comment'):
+            comment = self.comment
         else:
-          comment = '%s: %s' % (receiver,self.get_header_comment(res))
-        res = ['%s (%s)' % (tag,comment)]
+            comment = '%s: %s' % (receiver, self.get_header_comment(res))
+        res = ['%s (%s)' % (tag, comment)]
         if header_type == 'spf':
-            for k in ('client_ip','envelope_from','helo','receiver',
-                'problem','mechanism'):
+            for k in ('client_ip', 'envelope_from', 'helo', 'receiver',
+                      'problem', 'mechanism'):
                 v = locals()[k]
-                if v: res.append('%s=%s;'%(k.replace('_','-'),v))
-            for k,v in sorted(list(kv.items())):
-                if v: res.append('x-%s=%s;'%(k.replace('_','-'),quote_value(v)))
+                if v: res.append('%s=%s;' % (k.replace('_', '-'), v))
+            for k, v in sorted(list(kv.items())):
+                if v: res.append('x-%s=%s;' % (k.replace('_', '-'), quote_value(v)))
             # do identity last so we can easily drop the trailing ';'
-            res.append('%s=%s'%('identity',identity))
+            res.append('%s=%s' % ('identity', identity))
             return ' '.join(res)
         elif header_type == 'authres':
             if envelope_from:
-                return str(authres.AuthenticationResultsHeader(authserv_id = aid, \
-                    results = [authres.SPFAuthenticationResult(result = tag, \
-                    result_comment = comment, smtp_mailfrom = self.d, \
-                    smtp_mailfrom_comment = \
-                    'sender={0}; helo={1}; client-ip={2}; receiver={3}; mechanism={4}'.format(self.s, \
-                    self.h, self.c, self.r, mechanism))]))
+                return str(authres.AuthenticationResultsHeader(authserv_id=aid, \
+                                                               results=[authres.SPFAuthenticationResult(result=tag, \
+                                                                                                        result_comment=comment,
+                                                                                                        smtp_mailfrom=self.d, \
+                                                                                                        smtp_mailfrom_comment= \
+                                                                                                            'sender={0}; helo={1}; client-ip={2}; receiver={3}; mechanism={4}'.format(
+                                                                                                                self.s, \
+                                                                                                                self.h,
+                                                                                                                self.c,
+                                                                                                                self.r,
+                                                                                                                mechanism))]))
             else:
-                return str(authres.AuthenticationResultsHeader(authserv_id = aid, \
-                    results = [authres.SPFAuthenticationResult(result = tag, \
-                    result_comment = comment, smtp_helo = self.h, \
-                    smtp_helo_comment = \
-                    'sender={0}; client-ip={1}; receiver={2}; mechanism={3}'.format(self.s, \
-                    self.c, self.r, mechanism))]))
+                return str(authres.AuthenticationResultsHeader(authserv_id=aid, \
+                                                               results=[authres.SPFAuthenticationResult(result=tag, \
+                                                                                                        result_comment=comment,
+                                                                                                        smtp_helo=self.h, \
+                                                                                                        smtp_helo_comment= \
+                                                                                                            'sender={0}; client-ip={1}; receiver={2}; mechanism={3}'.format(
+                                                                                                                self.s, \
+                                                                                                                self.c,
+                                                                                                                self.r,
+                                                                                                                mechanism))]))
         else:
             raise SyntaxError('Unknown results header type: {0}'.format(header_type))
 
@@ -1577,25 +1609,32 @@ class query(object):
             return \
                 "domain of %s designates %s as permitted sender" \
                 % (sender, self.c)
-        elif res == 'softfail': return \
-      "transitioning domain of %s does not designate %s as permitted sender" \
-            % (sender, self.c)
-        elif res == 'neutral': return \
-            "%s is neither permitted nor denied by domain of %s" \
+        elif res == 'softfail':
+            return \
+                "transitioning domain of %s does not designate %s as permitted sender" \
+                % (sender, self.c)
+        elif res == 'neutral':
+            return \
+                "%s is neither permitted nor denied by domain of %s" \
                 % (self.c, sender)
-        elif res == 'none': return \
-            "%s is neither permitted nor denied by domain of %s" \
-                  % (self.c, sender)
-            #"%s does not designate permitted sender hosts" % sender
-        elif res == 'permerror': return \
-            "permanent error in processing domain of %s: %s" \
-                  % (sender, self.prob)
-        elif res == 'temperror': return \
-              "temporary error in processing during lookup of %s" % sender
-        elif res == 'fail': return \
-              "domain of %s does not designate %s as permitted sender" \
-              % (sender, self.c)
-        raise ValueError("invalid SPF result for header comment: "+res)
+        elif res == 'none':
+            return \
+                "%s is neither permitted nor denied by domain of %s" \
+                % (self.c, sender)
+        #"%s does not designate permitted sender hosts" % sender
+        elif res == 'permerror':
+            return \
+                "permanent error in processing domain of %s: %s" \
+                % (sender, self.prob)
+        elif res == 'temperror':
+            return \
+                "temporary error in processing during lookup of %s" % sender
+        elif res == 'fail':
+            return \
+                "domain of %s does not designate %s as permitted sender" \
+                % (sender, self.c)
+        raise ValueError("invalid SPF result for header comment: " + res)
+
 
 def split_email(s, h):
     """Given a sender email s and a HELO domain h, create a valid tuple
@@ -1621,6 +1660,7 @@ def split_email(s, h):
             return tuple(parts)
         else:
             return 'postmaster', s
+
 
 def quote_value(s):
     """Quote the value for a key-value pair in Received-SPF header field
@@ -1651,9 +1691,10 @@ def quote_value(s):
     >>> quote_value(None)
     """
     if s is None or RE_DOT_ATOM.match(s):
-      return s
-    return '"' + s.replace('\\',r'\\').replace('"',r'\"'
-                ).replace('\x00',r'\x00') + '"'
+        return s
+    return '"' + s.replace('\\', r'\\').replace('"', r'\"'
+    ).replace('\x00', r'\x00') + '"'
+
 
 def parse_mechanism(str, d):
     """Breaks A, MX, IP4, and PTR mechanisms into a (name, domain,
@@ -1707,6 +1748,7 @@ def parse_mechanism(str, d):
         return str, d, cidr, cidr6
     return a[0].lower(), a[1], cidr, cidr6
 
+
 def reverse_dots(name):
     """Reverse dotted IP addresses or domain names.
 
@@ -1720,6 +1762,7 @@ def reverse_dots(name):
     a = name.split('.')
     a.reverse()
     return '.'.join(a)
+
 
 def domainmatch(ptrs, domainsuffix):
     """grep for a given domain suffix against a list of validated PTR
@@ -1744,6 +1787,7 @@ def domainmatch(ptrs, domainsuffix):
 
     return False
 
+
 def expand_one(expansion, str, joiner):
     if not str:
         return expansion
@@ -1752,8 +1796,9 @@ def expand_one(expansion, str, joiner):
         delimiters = '.'
     expansion = split(expansion, delimiters, joiner)
     if reverse: expansion.reverse()
-    if ln: expansion = expansion[-int(ln)*2+1:]
+    if ln: expansion = expansion[-int(ln) * 2 + 1:]
     return ''.join(expansion)
+
 
 def split(str, delimiters, joiner=None):
     """Split a string into pieces by a set of delimiter characters.  The
@@ -1783,6 +1828,7 @@ def split(str, delimiters, joiner=None):
             element += c
     result.append(element)
     return result
+
 
 def insert_libspf_local_policy(spftxt, local=None):
     """Returns spftxt with local inserted just before last non-fail
@@ -1817,10 +1863,10 @@ def insert_libspf_local_policy(spftxt, local=None):
     if spf:
         # local policy is SPF mechanisms/modifiers with no
         # 'v=spf1' at the start
-        spf.reverse() #find the last non-fail mechanism
+        spf.reverse()  #find the last non-fail mechanism
         for mech in spf:
-        # map '?' '+' or '-' to 'neutral' 'pass'
-        # or 'fail'
+            # map '?' '+' or '-' to 'neutral' 'pass'
+            # or 'fail'
             if not RESULTS.get(mech[0]):
                 # actually finds last mech with default result
                 where = spf.index(mech)
@@ -1829,57 +1875,61 @@ def insert_libspf_local_policy(spftxt, local=None):
                 local = ' '.join(spf)
                 break
         else:
-            return spftxt # No local policy adds for v=spf1 -all
+            return spftxt  # No local policy adds for v=spf1 -all
     # Processing limits not applied to local policy.  Suggest
     # inserting 'local' mechanism to handle this properly
     #MAX_LOOKUP = 100
-    return 'v=spf1 '+local
+    return 'v=spf1 ' + local
+
 
 if sys.version_info[0] == 2:
-  def to_ascii(s):
-      "Raise PermError if arg is not 7-bit ascii."
-      try:
-        return s.encode('ascii')
-      except UnicodeError:
-        raise PermError('Non-ascii characters found',repr(s))
+    def to_ascii(s):
+        "Raise PermError if arg is not 7-bit ascii."
+        try:
+            return s.encode('ascii')
+        except UnicodeError:
+            raise PermError('Non-ascii characters found', repr(s))
 else:
-  def to_ascii(s):
-      "Raise PermError if arg is not 7-bit ascii."
-      try:
-        return s.decode('ascii')
-      except UnicodeError:
-        raise PermError('Non-ascii characters found',repr(s))
+    def to_ascii(s):
+        "Raise PermError if arg is not 7-bit ascii."
+        try:
+            return s.decode('ascii')
+        except UnicodeError:
+            raise PermError('Non-ascii characters found', repr(s))
+
 
 def _test():
     import doctest, spf
+
     return doctest.testmod(spf)
 
 
 if __name__ == '__main__':
     import getopt
+
     try:
-       opts,argv = getopt.getopt(sys.argv[1:],"hvs:",
-        ["help","verbose","strict"])
+        opts, argv = getopt.getopt(sys.argv[1:], "hvs:",
+                                   ["help", "verbose", "strict"])
     except getopt.GetoptError as err:
-       print(str(err))
-       print(USAGE)
-       sys.exit(2)
+        print(str(err))
+        print(USAGE)
+        sys.exit(2)
     verbose = False
     strict = True
-    for o,a in opts:
-        if o in ('-v','--verbose'):
-           verbose = True
-        if o in ('-s','--strict'):
-           strict = int(a)
-        elif o in ('-h','--help'):
-           print(USAGE)
+    for o, a in opts:
+        if o in ('-v', '--verbose'):
+            verbose = True
+        if o in ('-s', '--strict'):
+            strict = int(a)
+        elif o in ('-h', '--help'):
+            print(USAGE)
     if len(argv) == 0:
         print(USAGE)
         _test()
     elif len(argv) == 1:
         try:
             q = query(i='127.0.0.1', s='localhost', h='unknown',
-                receiver=socket.gethostname())
+                      receiver=socket.gethostname())
             print(q.dns_spf(argv[0]))
         except TempError as x:
             print("Temporary DNS error: ", x)
@@ -1887,9 +1937,9 @@ if __name__ == '__main__':
             print("PermError: ", x)
     elif len(argv) == 3:
         i, s, h = argv
-        q = query(i=i, s=s, h=h,receiver=socket.gethostname(),verbose=verbose,
-                strict=strict)
-        print(q.check(),q.mechanism)
+        q = query(i=i, s=s, h=h, receiver=socket.gethostname(), verbose=verbose,
+                  strict=strict)
+        print(q.check(), q.mechanism)
         if q.perm_error and q.perm_error.ext:
             print(q.perm_error.ext)
         if q.iplist:
@@ -1898,8 +1948,8 @@ if __name__ == '__main__':
     elif len(argv) == 4:
         i, s, h = argv[1:]
         q = query(i=i, s=s, h=h, receiver=socket.gethostname(),
-            strict=False, verbose=verbose)
-        print(q.check(argv[0]),q.mechanism)
+                  strict=False, verbose=verbose)
+        print(q.check(argv[0]), q.mechanism)
         if q.perm_error and q.perm_error.ext:
             print(q.perm_error.ext)
     else:
