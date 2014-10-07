@@ -114,18 +114,21 @@ def DNSLookup(name, qtype,  timeout=20):
         # return both as binary string.
         #
         res = []
-        for a in answers:
-            if a.rdtype == 16:
-                res.append(((name, qtype), a.strings))
-            if a.rdtype == 15:
-                res.append(((name, qtype), [a.preference,str(a.exchange)]))
-            if a.rdtype == 1:
-                res.append(((name, qtype), a.address))
+        if answers:
+            for a in answers :
+                if a.rdtype == 16:
+                    res.append(((name, qtype), a.strings))
+                if a.rdtype == 15:
+                    res.append(((name, qtype), [a.preference,str(a.exchange)]))
+                if a.rdtype == 1:
+                    res.append(((name, qtype), a.address))
         return res
     except AttributeError as x:
         raise TempError('DNS ' + str(x))
     except IOError as x:
         raise TempError('DNS ' + str(x))
+    except dns.resolver.NoAnswer as x:
+        return []
     except dns.exception.DNSException as x:
         raise TempError('DNS ' + str(x))
 
