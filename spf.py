@@ -787,7 +787,7 @@ class query(object):
         # Split string by space, drop the 'v=spf1'.  Split by all whitespace
         # casuses things like carriage returns being treated as valid space
         # separators, so split() is not sufficient.
-        spf = spf.split(' ')
+        spf = re.split('\s+',spf.strip())
         # Catch case where SPF record has no spaces.
         # Can never happen with conforming dns_spf(), however
         # in the future we might want to give warnings
